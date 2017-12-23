@@ -5,7 +5,7 @@
       <h1 class="title">SimulatorList</h1>
       <ul>
         <li v-for="simulator in simulators">
-          <Simulator v-bind:simulator=simulator v-on:boot=boot></Simulator>
+          <SimulatorComp v-bind:simulator=simulator v-on:boot=boot v-on:launchApplication=launchApplication v-on:openDataDirectory=openDataDirectory></SimulatorComp>
         </li>
       </ul>
     </section>
@@ -17,12 +17,15 @@
 
 import sim from '../../Simulator'
 import Vue from 'vue'
+import { shell } from 'electron'
 
-import Simulator from './Simulator.vue'
+import SimulatorComp from './Simulator.vue'
+
+import { Simulator, Application } from '@/Simulator'
 
 export default Vue.extend({
   name: "SimulatorList",
-  components: { Simulator },
+  components: { SimulatorComp },
   data() {
     return { simulators : [] }
   },
@@ -30,15 +33,24 @@ export default Vue.extend({
     boot(e) {
       console.log("Should boot", e)
       sim.boot(e)
+    },
+    launchApplication(application: Application, simulator: Simulator) {
+      console.log(application, simulator)
+      sim.launch(application, simulator)
+    },
+    openDataDirectory(application: Application, simulator: Simulator) {
+      sim.dataContainerPath(application, simulator)
+      .then((path) => {
+        console.log('open', path)
+        shell.openExternal('file:///' + path)
+      })
     }
   },
   mounted: function () {
-    sim.testSim()
+    sim.fetchSimulators()
       .then((r) => {
         this.simulators = r
       })
-      
-    this.$on('boot', () => { console.log('hi') })
   }
 })
 

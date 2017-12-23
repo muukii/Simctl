@@ -1,17 +1,40 @@
 <template>
   
-  <div class="column">
+  <div class="container">
     
-    <p class="title is-3">{{ name }}</p>
+    <div class="column">
+      <p class="title is-3">{{ name }}</p>
+    </div>
         
-    <div class="tags has-addons">
-      <span class="tag">{{ deviceName }}</span>
-      <span class="tag is-info">{{ runtimeName }}</span>
+    <div class="column">
+      <div class="tags has-addons">
+        <span class="tag">{{ deviceName }}</span>
+        <span class="tag is-info">{{ runtimeName }}</span>
+      </div>
     </div>
     
-    <a class="button" v-on:click="boot()">Boot</a>
-    <a class="button" v-on:click="storeUDIDToClipboard()">Copy UDID</a>
+    <div class="column">
+      <a class="button" v-on:click="boot()">Boot</a>
+      <a class="button" v-on:click="storeUDIDToClipboard()">Copy UDID</a>
+      <a class="button" v-on:click="test()">Test</a>
+    </div>
     
+    <div class="column">
+      <p class="title is-4">Applications</p>
+      <ul>
+        <li v-for="application in applications">
+          <div class="column">
+            <p class="title is-5">{{ application.name }} : {{ application.bundleIdentifier }}</p>
+            <div class="container">
+              <a class="button" v-on:click="lanuch(application)">Launch</a>
+              <a class="button" v-on:click="openDataDirectory(application)">Open Data</a>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+    
+    <hr>
   </div>
 
 </template>
@@ -19,12 +42,18 @@
 <script lang="ts">
 
 import Vue from 'vue'
-import { Simulator } from '@/Simulator'
+import sim from '@/Simulator'
+import { Simulator, Application } from '@/Simulator'
 
 export default Vue.extend({
   name: "Simulator",
   props: {
     simulator: Simulator
+  },
+  data() {
+    return {
+      applications: ([] as Application[])
+    }
   },
   computed: {
     name(): string {
@@ -44,10 +73,19 @@ export default Vue.extend({
     },
     boot() {
       this.$emit('boot', this.simulator)
+    },
+    lanuch(application: Application) {
+      this.$emit('launchApplication', application, this.simulator)
+    },
+    openDataDirectory(application: Application) {
+      this.$emit('openDataDirectory', application, this.simulator)
     }
   },
   mounted() {
-    this.$on('boot', (e) => { console.log('hi', e) })
+    sim.fetchApplications(this.simulator)
+      .then((r) => {
+        this.applications = r
+      })
   }
 })
 
