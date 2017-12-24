@@ -1,6 +1,8 @@
 # simctl
 
-> An electron-vue project
+Controller for Simulator of Xcode with `xcrun simctl`
+
+<img src="./sample.png" width=1112>
 
 #### Build Setup
 
