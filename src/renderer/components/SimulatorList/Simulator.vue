@@ -68,8 +68,7 @@ export default Vue.extend({
   },
   methods: {
     storeUDIDToClipboard() {
-      console.log(this.simulator.udid)
-      console.log(this.$store)
+      this.$emit('copyToClipboard', this.simulator.udid)
     },
     boot() {
       this.$emit('boot', this.simulator)

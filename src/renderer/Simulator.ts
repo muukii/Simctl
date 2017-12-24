@@ -4,7 +4,8 @@ import path from 'path'
 import os from 'os'
 import glob from 'glob'
 import plist from 'simple-plist'
-import { exec } from 'child_process'
+import { exec, execSync } from 'child_process'
+import { shell } from 'electron'
 
 export class Simulator {
   
@@ -51,32 +52,12 @@ export default {
         .sort((a, b) => {
           return fs.statSync(b).mtime.getTime() - fs.statSync(a).mtime.getTime();
         })
-      
-      console.log(files)
-      
+                  
       const sims = files
         .map((file) => { return plist.parse(fs.readFileSync(path.join(file, 'device.plist'), 'utf8')) })
         .map((obj) => { return new Simulator(obj) })
       
       resolve(sims)
-    })
-  },
-  async testSim(): Promise<Simulator[]> {
-    
-    return new Promise<Simulator[]>((resolve, reject) => {
-      
-      const pattern = path.join(baseDir, '/*/*.plist')
-        
-      console.log('Find device.plist', pattern)
-            
-      glob(pattern, (error, files: [any]) => {
-                      
-        const result: Simulator[] = files
-          .map((file) => { return plist.parse(fs.readFileSync(file, 'utf8')) })
-          .map((obj) => { return new Simulator(obj) })
-                          
-        resolve(result)
-      })
     })
   },
   async fetchApplications(forSimulator: Simulator): Promise<Application[]> {
@@ -118,6 +99,8 @@ export default {
     })
   },
   async boot(simulator: Simulator): Promise<void> {
+    
+    this.openSimulator()
       
     return new Promise<void>((resolve) => {
       exec(`xcrun simctl boot ${simulator.udid}`, (error, r) => {
@@ -136,9 +119,10 @@ export default {
         resolve(r)
       })
     })
-    
   },
   async launch(application: Application, onSimulator: Simulator): Promise<void> {
+    
+    this.openSimulator()
     
     await this.boot(onSimulator)
     
@@ -148,5 +132,9 @@ export default {
         resolve()
       })
     })
+  },
+  openSimulator() {
+    const simulatorPath = path.join(execSync('xcode-select -p').toString().trim(), '/Applications/Simulator.app')
+    shell.openExternal(`file:///${simulatorPath}`)
   }
 }
