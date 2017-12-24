@@ -18,10 +18,9 @@
   import sim from '../../Simulator'
   import Vue from 'vue'
   import { shell, clipboard } from 'electron'
-
   import SimulatorComp from './Simulator.vue'
-
   import { Simulator, Application } from '../../Simulator'
+  import Notification from '../Notification/Notification.vue'
 
   export default Vue.extend({
     name: "SimulatorList",
@@ -31,12 +30,12 @@
     },
     methods: {
       boot(e) {
-        console.log("Should boot", e)
         sim.boot(e)
+        this.showNotification("Start booting")
       },
       launchApplication(application: Application, simulator: Simulator) {
-        console.log(application, simulator)
         sim.launch(application, simulator)
+        this.showNotification("Start launching")
       },
       openDataDirectory(application: Application, simulator: Simulator) {
         sim.dataContainerPath(application, simulator)
@@ -46,7 +45,21 @@
       },
       copyToClipboard(udid: string) {
         clipboard.writeText(udid)
+        this.showNotification("Copied UDID to Clipboard")
       },
+      showNotification(message: string) {
+        const notification = new Notification({
+          propsData: {
+            message: message,
+            onDismiss: () => {
+              this.$root.$el.removeChild(notification.$el)
+            }
+          }
+        })
+        .$mount();
+        
+        this.$root.$el.appendChild(notification.$el)
+      }
     },
     mounted: function () {
       sim.fetchSimulators()
