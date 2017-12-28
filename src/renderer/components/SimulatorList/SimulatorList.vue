@@ -5,7 +5,7 @@
       <h1 class="title">SimulatorList</h1>
       <ul>
         <li v-for="simulator in simulators">
-          <SimulatorComp v-bind:simulator=simulator v-on:boot=boot v-on:launchApplication=launchApplication v-on:openDataDirectory=openDataDirectory v-on:copyToClipboard=copyToClipboard></SimulatorComp>
+          <SimulatorComp v-bind:simulator=simulator v-on:boot=boot v-on:launchApplication=launchApplication v-on:openDataDirectory=openDataDirectory v-on:openAppDirectory=openAppDirectory v-on:copyToClipboard=copyToClipboard></SimulatorComp>
         </li>
       </ul>
     </section>
@@ -21,6 +21,7 @@
   import SimulatorComp from './Simulator.vue'
   import { Simulator, Application } from '../../Simulator'
   import Notification from '../Notification/Notification.vue'
+  import path from 'path'
 
   export default Vue.extend({
     name: "SimulatorList",
@@ -42,6 +43,9 @@
         .then((path) => {
           shell.openExternal('file:///' + path)
         })
+      },
+      openAppDirectory(application: Application, simulator: Simulator) {
+        shell.openExternal('file:///' + path.parse(application.path).dir)
       },
       copyToClipboard(udid: string) {
         clipboard.writeText(udid)

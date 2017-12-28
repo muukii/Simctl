@@ -28,6 +28,7 @@
             <div class="container">
               <a class="button" v-on:click="lanuch(application)">Launch</a>
               <a class="button" v-on:click="openDataDirectory(application)">Open Data</a>
+              <a class="button" v-on:click="openAppDirectory(application)">Open App</a>
             </div>
           </div>
         </li>
@@ -78,6 +79,9 @@ export default Vue.extend({
     },
     openDataDirectory(application: Application) {
       this.$emit('openDataDirectory', application, this.simulator)
+    },
+    openAppDirectory(application: Application) {
+      this.$emit('openAppDirectory', application, this.simulator)
     }
   },
   mounted() {

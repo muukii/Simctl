@@ -9,11 +9,11 @@ import { shell } from 'electron'
 
 export class Simulator {
   
-  udid: string
-  deviceType: string
-  name: string
-  runtime: string
-  state: number
+  readonly udid: string
+  readonly deviceType: string
+  readonly name: string
+  readonly runtime: string
+  readonly state: number
   
   constructor(object: any) {
     
@@ -25,16 +25,44 @@ export class Simulator {
   }
 }
 
+export class ApplicationIcon {
+  
+  readonly filePaths: string[]
+  readonly name: string
+  
+  constructor(plist: any, applicationPath: string) {
+    
+    this.filePaths = (plist.CFBundleIconFiles as Array<string>)
+      .map(value => path.join(applicationPath, value))
+      
+    console.log(this.filePaths)
+      
+    this.name = (plist.CFBundleIconName as string | undefined) || ""
+    
+  }
+}
+
 export class Application {
+    
+  readonly name: string
+  readonly bundleIdentifier: string
+  readonly applicationIcon: ApplicationIcon | null
+  readonly path: string
   
-  name: string
-  bundleIdentifier: string
-  iconFilePaths: string[] = []
-  
-  constructor(name: string, bundleIdentifier: string) {
-    this.name = name
-    this.bundleIdentifier = bundleIdentifier
-    // this.iconFilePaths = iconFilePaths
+  constructor(appPath: string) {
+    
+    const appInfoPlistPath = path.join(appPath, 'Info.plist')
+    const info: any = plist.readFileSync(appInfoPlistPath)
+    
+    this.path = appPath
+    this.name = info.CFBundleDisplayName || info.CFBundleName
+    this.bundleIdentifier = info.CFBundleIdentifier
+    
+    if (info.CFBundleIcons != null && info.CFBundleIcons.CFBundlePrimaryIcon != null) {
+      this.applicationIcon = new ApplicationIcon(info.CFBundleIcons.CFBundlePrimaryIcon, appPath)
+    } else {
+      this.applicationIcon = null
+    }
   }
 }
 
@@ -65,33 +93,15 @@ export default {
     return new Promise<Application[]>((resolve, reject) => {
       
       const pattern = path.join(baseDir, `/${forSimulator.udid}/data/Containers/Bundle/Application/*`)
-      
-      console.log(pattern)
-      
+                
       glob(pattern, (error, files: [any]) => {
                             
         const applications = files.map((file) => {
           
           const appPath = glob.sync(path.join(file, '*.app'))[0]
           
-          const appInfoPlistPath = path.join(appPath, 'Info.plist')
+          return new Application(appPath)
                     
-          const info = plist.readFileSync(appInfoPlistPath)
-          
-          console.log(info)
-          
-          const containerPlistPath = path.join(file, '/.com.apple.mobile_container_manager.metadata.plist')
-          
-          const plistFile = plist.readFileSync(containerPlistPath)
-          
-          // const info = plist.parse(fs.readFileSync(containerPlistPath, 'utf8'))
-          // console.log(app, info)
-          
-          return new Application(
-            info.CFBundleDisplayName || info.CFBundleName,
-            info.CFBundleIdentifier
-          )
-          
         })
         
         resolve(applications)
@@ -99,42 +109,43 @@ export default {
     })
   },
   async boot(simulator: Simulator): Promise<void> {
+        
+    try {
+      await this.__exec(`xcrun simctl boot ${simulator.udid}`)
+    } catch(e) {
+    }
     
-    this.openSimulator()
-      
-    return new Promise<void>((resolve) => {
-      exec(`xcrun simctl boot ${simulator.udid}`, (error, r) => {
-        console.log(error, r)
-        resolve()
-      })
-    })
+    return Promise.resolve()
   },
   async dataContainerPath(forApplication: Application, onSimulator: Simulator): Promise<string> {
     
     await this.boot(onSimulator)
+    const path = await this.__exec(`xcrun simctl get_app_container ${onSimulator.udid} ${forApplication.bundleIdentifier} data`)
     
-    return new Promise<string>((resolve) => {
-      exec(`xcrun simctl get_app_container ${onSimulator.udid} ${forApplication.bundleIdentifier} data`, (error, r) => {
-        console.log(error, r)
-        resolve(r)
-      })
-    })
+    return Promise.resolve(path)
   },
   async launch(application: Application, onSimulator: Simulator): Promise<void> {
     
     this.openSimulator()
     
     await this.boot(onSimulator)
+    await this.__exec(`xcrun simctl launch ${onSimulator.udid} ${application.bundleIdentifier}`)
     
-    return new Promise<void>((resolve) => {
-      exec(`xcrun simctl launch ${onSimulator.udid} ${application.bundleIdentifier}`, (error, r) => {
-        console.log(error, r)
-        resolve()
-      })
-    })
+    return Promise.resolve()
   },
   openSimulator() {
     const simulatorPath = path.join(execSync('xcode-select -p').toString().trim(), '/Applications/Simulator.app')
     shell.openExternal(`file:///${simulatorPath}`)
+  },
+  async __exec(command: string): Promise<string> {
+    return new Promise<string>((p_resolve, p_error) => {
+      exec(command, (error, r) => {
+        if (error) {
+          p_error(error)
+        } else {
+          p_resolve(r)
+        }
+      })
+    })
   }
 }
